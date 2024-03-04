@@ -47,6 +47,22 @@ def reminder_date(message):
   else:
     bot.send_message(message.chat.id, 'I don\'t understand')
 
+@bot.message_handler(state=StatesGroup.reminder_creation_files_prompt)
+def reminder_date(message):
+  if message == 'Yes':
+    bot.send_message(message.chat.id, 'Ok, attach the files')
+    bot.set_state(
+      message.from_user.id,
+      StatesGroup.reminder_creation_files,
+      message.chat.id
+    )
+  else:
+    bot.send_message(message.chat.id, 'Reminder is created')
+
+@bot.message_handler(state=StatesGroup.reminder_creation_files)
+def reminder_date(message):
+  bot.send_message(message.chat.id, 'Reminder is created')
+
 @bot.message_handler()
 def root(message):
   # TODO: parse command
