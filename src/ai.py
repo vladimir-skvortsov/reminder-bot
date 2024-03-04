@@ -15,9 +15,10 @@ chat = GigaChat(credentials=gigachat_auth_data, verify_ssl_certs=False, temperat
 def parse_date(user_input):
   now = datetime.datetime.now()
   formatted_now = now.strftime('%Y-%m-%d')
+  weekday = print(now.strftime("%A"))
   date = ResponseSchema(
     name='date',
-    description=f'Now is {formatted_now}. Does the provided text refers to some sort if date? If yes, calculate and format it using template: "YYYY-mm-dd", None if no or unknown',
+    description=f'Now is {formatted_now}, {weekday}. Does the provided text refers to some sort if date? If yes, calculate the date in format "YYYY-mm-dd", None if no or unknown',
   )
   response_schemas = [date]
   output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
@@ -26,7 +27,7 @@ def parse_date(user_input):
     For the following text, extract the following information:
 
     date: Does the provided text refers to some sort if date? \
-    If yes, calculate and format it using template: "YYYY-mm-dd", None if no or unknown.
+    If yes, calculate the date in format "YYYY-mm-dd", None if no or unknown.
 
     text: {user_input}
 
