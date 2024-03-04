@@ -38,11 +38,8 @@ def parse_date(user_input):
     format_instructions=format_instructions,
   )
   response = chat(messages)
-  print(response)
   output_dict = output_parser.parse(response.content)
-  print(output_dict)
   date_string = output_dict.get('date')
-  print(date_string)
 
   if date_string == 'None':
     return None
