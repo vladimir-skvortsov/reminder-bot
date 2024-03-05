@@ -2,6 +2,7 @@ import os
 import telebot
 from dotenv import load_dotenv
 import ai
+from db import Reminder
 
 load_dotenv()
 
@@ -26,6 +27,13 @@ def start(message):
   )
 
   bot.reply_to(message, 'Welcome! I\'m your reminder bot', reply_markup=reply_markup)
+
+@bot.message_handler(commands=['list'])
+def list_reminders(message):
+  reminders = Reminder.get_all_reminders()
+  text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
+
+  bot.reply_to(message, text)
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
