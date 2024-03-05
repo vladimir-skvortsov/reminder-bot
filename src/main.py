@@ -15,8 +15,17 @@ class StatesGroup(telebot.handler_backends.StatesGroup):
   reminder_creation_files = telebot.handler_backends.State()
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-  bot.reply_to(message, 'Welcome! I\'m your reminder bot')
+def start(message):
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('List reminders'),
+    telebot.types.KeyboardButton('List completed reminders'),
+  )
+
+  bot.reply_to(message, 'Welcome! I\'m your reminder bot', reply_markup=reply_markup)
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
@@ -31,7 +40,6 @@ def reminder_date(message):
     )
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
       data['reminder_creation_date'] = date
-      print(data)
   else:
     bot.send_message(message.chat.id, 'I don\'t understand')
 
