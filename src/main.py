@@ -26,14 +26,14 @@ def start(message):
     telebot.types.KeyboardButton('List completed reminders'),
   )
 
-  bot.reply_to(message, 'Welcome! I\'m your reminder bot', reply_markup=reply_markup)
+  bot.send_message(message.chat.id, 'Welcome! I\'m your reminder bot', reply_markup=reply_markup)
 
 @bot.message_handler(commands=['list'])
 def list_reminders(message):
   reminders = Reminder.get_all_reminders()
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
 
-  bot.reply_to(message, text)
+  bot.send_message(message.chat.id, text)
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
