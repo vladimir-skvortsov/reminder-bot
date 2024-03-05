@@ -11,6 +11,7 @@ state_storage = telebot.storage.StateMemoryStorage()
 bot = telebot.TeleBot(bot_token, state_storage=state_storage)
 
 class StatesGroup(telebot.handler_backends.StatesGroup):
+  reminder_creation_name = telebot.handler_backends.State()
   reminder_creation_date = telebot.handler_backends.State()
   reminder_creation_files_prompt = telebot.handler_backends.State()
   reminder_creation_files = telebot.handler_backends.State()
@@ -34,6 +35,26 @@ def list_reminders(message):
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
 
   bot.send_message(message.chat.id, text)
+
+@bot.message_handler(commands=['add'])
+def list_reminders(message):
+  bot.send_message(message.chat.id, 'Enter reminder name')
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_creation_name,
+    message.chat.id
+  )
+
+@bot.message_handler(state=StatesGroup.reminder_creation_name)
+def reminder_name(message):
+  bot.send_message(message.chat.id, 'Now the date')
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_creation_date,
+    message.chat.id
+  )
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    data['reminder_creation_name'] = message.text.strip()
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
@@ -69,14 +90,14 @@ def reminder_date(message):
 
 @bot.message_handler()
 def root(message):
-  bot.send_message(message.chat.id, 'Now the date')
+  # TODO: parse command
+
+  bot.send_message(message.chat.id, 'Enter reminder name')
   bot.set_state(
     message.from_user.id,
-    StatesGroup.reminder_creation_date,
+    StatesGroup.reminder_creation_name,
     message.chat.id
   )
-  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-    data['reminder_creation_name'] = message.text.strip()
 
 
 bot.add_custom_filter(telebot.custom_filters.StateFilter(bot))
