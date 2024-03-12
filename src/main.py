@@ -33,6 +33,10 @@ def start(message):
     reply_markup=reply_markup,
   )
 
+@bot.message_handler(commands=['cancel'])
+def list_reminders(message):
+  bot.delete_state(message.from_user.id, message.chat.id)
+
 @bot.message_handler(commands=['list'])
 def list_reminders(message):
   reminders = db.Reminder.get_all()
