@@ -1,5 +1,6 @@
 import os
 import telebot
+import datetime
 from dotenv import load_dotenv
 import ai
 import utils
@@ -95,19 +96,35 @@ def reminder_date(message):
     bot.send_message(message.chat.id, 'Cancelled')
     return
 
-  date = ai.parse_date(message.text)
+  date_string = message.text.strip().lower()
 
-  if date:
-    bot.send_message(message.chat.id, 'Do you want to attach any files?')
-    bot.set_state(
-      message.from_user.id,
-      StatesGroup.reminder_creation_files_prompt,
-      message.chat.id
-    )
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-      data['reminder_creation_date'] = date
-  else:
+  try:
+    date = datetime.datetime.strptime(date_string, '%d.%m.%Y')
+  except:
     bot.send_message(message.chat.id, 'I don\'t understand')
+    return
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=True,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton('No'),
+  )
+  reply_markup.row(telebot.types.KeyboardButton('✖️ Cancel'))
+  bot.send_message(
+    message.chat.id,
+    'Do you want to attach any files?',
+    reply_markup=reply_markup,
+  )
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_creation_files_prompt,
+    message.chat.id
+  )
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    data['reminder_creation_date'] = date
 
 @bot.message_handler(state=StatesGroup.reminder_creation_files_prompt)
 def reminder_date(message):
