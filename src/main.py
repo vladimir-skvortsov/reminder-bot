@@ -2,7 +2,8 @@ import os
 import telebot
 from dotenv import load_dotenv
 import ai
-from db import Reminder
+import utils
+import db
 
 load_dotenv()
 
@@ -18,20 +19,12 @@ class StatesGroup(telebot.handler_backends.StatesGroup):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-  reply_markup = telebot.types.ReplyKeyboardMarkup(
-    resize_keyboard=True,
-    one_time_keyboard=False,
-  )
-  reply_markup.row(
-    telebot.types.KeyboardButton('List reminders'),
-    telebot.types.KeyboardButton('List completed reminders'),
-  )
-
+  reply_markup = utils.get_main_keyboard()
   bot.send_message(message.chat.id, 'Welcome! I\'m your reminder bot', reply_markup=reply_markup)
 
 @bot.message_handler(commands=['list'])
 def list_reminders(message):
-  reminders = Reminder.get_all()
+  reminders = db.Reminder.get_all()
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
 
   bot.send_message(message.chat.id, text)
@@ -83,14 +76,20 @@ def reminder_date(message):
     )
   else:
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-      reminder = Reminder(
+      reminder = db.Reminder(
         name=data['reminder_creation_name'],
         date=data['reminder_creation_date'],
       )
-      Reminder.add(reminder)
+      db.Reminder.add(reminder)
 
     bot.delete_state(message.from_user.id, message.chat.id)
-    bot.send_message(message.chat.id, 'Reminder is created')
+
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(
+      message.chat.id,
+      'Reminder is created',
+      reply_markup=reply_markup,
+    )
 
 @bot.message_handler(
   state=StatesGroup.reminder_creation_files,
@@ -117,14 +116,20 @@ def reminder_date(message):
       new_file.write(downloaded_file)
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-    reminder = Reminder(
+    reminder = db.Reminder(
       name=data['reminder_creation_name'],
       date=data['reminder_creation_date'],
     )
-    Reminder.add(reminder)
+    db.Reminder.add(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
-  bot.send_message(message.chat.id, 'Reminder is created')
+
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(
+    message.chat.id,
+    'Reminder is created',
+    reply_markup=reply_markup,
+  )
 
 bot.add_custom_filter(telebot.custom_filters.StateFilter(bot))
 
