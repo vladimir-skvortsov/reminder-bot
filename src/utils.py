@@ -6,7 +6,10 @@ def get_main_keyboard():
     one_time_keyboard=True,
   )
   reply_markup.row(
-    telebot.types.KeyboardButton('List reminders'),
-    telebot.types.KeyboardButton('List completed reminders'),
+    telebot.types.KeyboardButton('➕ Add'),
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('📄 List reminders'),
+    telebot.types.KeyboardButton('✔️ List completed reminders'),
   )
   return reply_markup
