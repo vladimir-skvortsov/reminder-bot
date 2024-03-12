@@ -26,24 +26,24 @@ class Reminder(Base):
     return f'Reminder(id={self.id}, name={self.name}, date={self.date})'
 
   @classmethod
-  def get_all_reminders(cls):
+  def get_all(cls):
     session = Session()
     return session.query(cls).all()
 
   @classmethod
-  def add_reminder(cls, reminder):
+  def add(cls, reminder):
     session = Session()
     session.add(reminder)
     session.commit()
 
   @classmethod
-  def update_reminder(cls, reminder):
+  def update(cls, reminder):
     session = Session()
     session.merge(reminder)
     session.commit()
 
   @classmethod
-  def delete_reminder(cls, id):
+  def delete(cls, id):
     session = Session()
     reminder = session.query(cls).get(id)
     if reminder is not None:
@@ -51,5 +51,5 @@ class Reminder(Base):
       session.commit()
 
 if __name__ == '__main__':
-  reminders = Reminder.get_all_reminders()
+  reminders = Reminder.get_all()
   print(reminders)

@@ -31,7 +31,7 @@ def start(message):
 
 @bot.message_handler(commands=['list'])
 def list_reminders(message):
-  reminders = Reminder.get_all_reminders()
+  reminders = Reminder.get_all()
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
 
   bot.send_message(message.chat.id, text)
@@ -58,13 +58,13 @@ def reminder_name(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
-  date = ai.parse_date(message)
+  date = ai.parse_date(message.text.strip())
 
   if date:
     bot.send_message(message.chat.id, 'Do you want to attach any files?')
     bot.set_state(
       message.from_user.id,
-      StatesGroup.reminder_creation_date,
+      StatesGroup.reminder_creation_files_prompt,
       message.chat.id
     )
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
@@ -74,7 +74,7 @@ def reminder_date(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_files_prompt)
 def reminder_date(message):
-  if message == 'Yes':
+  if message.text == 'Yes':
     bot.send_message(message.chat.id, 'Ok, attach the files')
     bot.set_state(
       message.from_user.id,
@@ -82,25 +82,30 @@ def reminder_date(message):
       message.chat.id
     )
   else:
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+      reminder = Reminder(
+        name=data['reminder_creation_name'],
+        date=data['reminder_creation_date'],
+      )
+      Reminder.add(reminder)
+
+    bot.delete_state(message.from_user.id, message.chat.id)
     bot.send_message(message.chat.id, 'Reminder is created')
+
 
 @bot.message_handler(state=StatesGroup.reminder_creation_files)
 def reminder_date(message):
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    reminder = Reminder(
+      name=data['reminder_creation_name'],
+      date=data['reminder_creation_date'],
+    )
+    Reminder.add(reminder)
+
+  bot.delete_state(message.from_user.id, message.chat.id)
   bot.send_message(message.chat.id, 'Reminder is created')
-
-@bot.message_handler()
-def root(message):
-  # TODO: parse command
-
-  bot.send_message(message.chat.id, 'Enter reminder name')
-  bot.set_state(
-    message.from_user.id,
-    StatesGroup.reminder_creation_name,
-    message.chat.id
-  )
 
 
 bot.add_custom_filter(telebot.custom_filters.StateFilter(bot))
-bot.add_custom_filter(telebot.custom_filters.IsDigitFilter())
 
 bot.infinity_polling()

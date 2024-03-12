@@ -15,7 +15,7 @@ chat = GigaChat(credentials=gigachat_auth_data, verify_ssl_certs=False, temperat
 def parse_date(user_input):
   now = datetime.datetime.now()
   formatted_now = now.strftime('%Y-%m-%d')
-  weekday = print(now.strftime("%A"))
+  weekday = now.strftime("%A")
   date = ResponseSchema(
     name='date',
     description=f'Now is {formatted_now}, {weekday}. Does the provided text refers to some sort if date? If yes, calculate the date in format "YYYY-mm-dd", None if no or unknown',
