@@ -92,9 +92,30 @@ def reminder_date(message):
     bot.delete_state(message.from_user.id, message.chat.id)
     bot.send_message(message.chat.id, 'Reminder is created')
 
-
-@bot.message_handler(state=StatesGroup.reminder_creation_files)
+@bot.message_handler(
+  state=StatesGroup.reminder_creation_files,
+  content_types=['document', 'photo', 'audio'],
+)
 def reminder_date(message):
+  if message.document:
+    file_info = bot.get_file(message.document.file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+
+    with open(message.document.file_name, 'wb') as new_file:
+      new_file.write(downloaded_file)
+  elif message.photo:
+    file_info = bot.get_file(message.photo[-1].file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+
+    with open('photo.jpg', 'wb') as new_file:
+      new_file.write(downloaded_file)
+  elif message.audio:
+    file_info = bot.get_file(message.audio.file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+
+    with open(message.audio.title + '.mp3', 'wb') as new_file:
+      new_file.write(downloaded_file)
+
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     reminder = Reminder(
       name=data['reminder_creation_name'],
@@ -104,7 +125,6 @@ def reminder_date(message):
 
   bot.delete_state(message.from_user.id, message.chat.id)
   bot.send_message(message.chat.id, 'Reminder is created')
-
 
 bot.add_custom_filter(telebot.custom_filters.StateFilter(bot))
 
