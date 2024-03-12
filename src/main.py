@@ -42,7 +42,7 @@ def list_reminders(message):
 
 @bot.message_handler(commands=['add'])
 def list_reminders(message):
-  bot.send_message(message.chat.id, 'Enter reminder name')
+  bot.send_message(message.chat.id, 'What should I remind you about?')
   bot.set_state(
     message.from_user.id,
     StatesGroup.reminder_creation_name,
