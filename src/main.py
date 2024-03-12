@@ -65,6 +65,11 @@ def list_reminders(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_name)
 def reminder_name(message):
+  if (message.text == '✖️ Cancel'):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    bot.send_message(message.chat.id, 'Cancelled')
+    return
+
   bot.send_message(message.chat.id, 'Now the date')
   bot.set_state(
     message.from_user.id,
