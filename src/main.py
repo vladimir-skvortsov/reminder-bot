@@ -70,7 +70,16 @@ def reminder_name(message):
     bot.send_message(message.chat.id, 'Cancelled')
     return
 
-  bot.send_message(message.chat.id, 'Now the date')
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=True,
+  )
+  reply_markup.row(telebot.types.KeyboardButton('✖️ Cancel'))
+  bot.send_message(
+    message.chat.id,
+    'Enter the date',
+    reply_markup=reply_markup,
+  )
   bot.set_state(
     message.from_user.id,
     StatesGroup.reminder_creation_date,
@@ -81,7 +90,12 @@ def reminder_name(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
-  date = ai.parse_date(message.text.strip())
+  if (message.text == '✖️ Cancel'):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    bot.send_message(message.chat.id, 'Cancelled')
+    return
+
+  date = ai.parse_date(message.text)
 
   if date:
     bot.send_message(message.chat.id, 'Do you want to attach any files?')

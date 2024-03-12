@@ -13,6 +13,7 @@ gigachat_auth_data = os.getenv('GIGACHAT_AUTH_DATA')
 chat = GigaChat(credentials=gigachat_auth_data, verify_ssl_certs=False, temperature=0)
 
 def parse_date(user_input):
+  user_input = user_input.strip().lower()
   now = datetime.datetime.now()
   formatted_now = now.strftime('%Y-%m-%d')
   weekday = now.strftime("%A")
