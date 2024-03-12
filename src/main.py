@@ -23,13 +23,14 @@ def start(message):
   bot.send_message(
     message.chat.id,
     'Welcome! I\'m your personal reminder bot.\n\n'
-    'Here are some useful commands for you:\n\n'
+    '<b>Here are some useful commands for you:</b>\n\n'
     '/start - start using bot / go to main menu\n'
     '/help - open help\n'
     '/add - add new reminder\n'
     '/list - get a list of your reminders\n'
     '/list_completed - get a list of completed reminders\n'
     '/cancel - cancel the current operation',
+    parse_mode='HTML',
     reply_markup=reply_markup,
   )
 
@@ -46,7 +47,16 @@ def list_reminders(message):
 
 @bot.message_handler(commands=['add'])
 def list_reminders(message):
-  bot.send_message(message.chat.id, 'What should I remind you about?')
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=True,
+  )
+  reply_markup.row(telebot.types.KeyboardButton('✖️ Cancel'))
+  bot.send_message(
+    message.chat.id,
+    'What should I remind you about?',
+    reply_markup=reply_markup,
+  )
   bot.set_state(
     message.from_user.id,
     StatesGroup.reminder_creation_name,
