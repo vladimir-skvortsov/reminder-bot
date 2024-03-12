@@ -20,7 +20,18 @@ class StatesGroup(telebot.handler_backends.StatesGroup):
 @bot.message_handler(commands=['start'])
 def start(message):
   reply_markup = utils.get_main_keyboard()
-  bot.send_message(message.chat.id, 'Welcome! I\'m your reminder bot', reply_markup=reply_markup)
+  bot.send_message(
+    message.chat.id,
+    'Welcome! I\'m your personal reminder bot.\n\n'
+    'Here are some useful commands for you:\n\n'
+    '/start - start using bot / go to main menu\n'
+    '/help - open help\n'
+    '/add - add new reminder\n'
+    '/list - get a list of your reminders\n'
+    '/list_completed - get a list of completed reminders\n'
+    '/cancel - cancel the current operation',
+    reply_markup=reply_markup,
+  )
 
 @bot.message_handler(commands=['list'])
 def list_reminders(message):
