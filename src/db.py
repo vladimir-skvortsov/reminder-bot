@@ -31,12 +31,12 @@ class Reminder(Base):
     return session.query(cls).all()
 
   @classmethod
-  def get_all_done(cls):
+  def get_all_completed(cls):
     session = Session()
     return session.query(cls).filter_by(is_done=True).all()
 
   @classmethod
-  def get_all_undone(cls):
+  def get_all_uncompleted(cls):
     session = Session()
     return session.query(cls).filter_by(is_done=False).all()
 

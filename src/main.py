@@ -45,28 +45,30 @@ def start(message):
   )
 
 @bot.message_handler(commands=['cancel'])
-def list_reminders(message):
+def cancel(message):
   bot.delete_state(message.from_user.id, message.chat.id)
 
 @bot.message_handler(commands=['list'])
-def list_reminders(message):
-  reminders = db.Reminder.get_all_undone()
+def list_uncompleted_reminders(message):
+  reminders = db.Reminder.get_all_uncompleted()
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
-  bot.send_message(message.chat.id, text)
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(message.chat.id, text, reply_markup=reply_markup)
 
 @bot.message_handler(commands=['list_completed'])
-def list_reminders(message):
-  reminders = db.Reminder.get_all_done()
+def list_completed_reminders(message):
+  reminders = db.Reminder.get_all_completed()
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
-  bot.send_message(message.chat.id, text)
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(message.chat.id, text, reply_markup)
 
 @bot.message_handler(commands=['add'])
-def list_reminders(message):
+def add_reminder(message):
   reply_markup = telebot.types.ReplyKeyboardMarkup(
     resize_keyboard=True,
     one_time_keyboard=True,
   )
-  reply_markup.row(telebot.types.KeyboardButton('✖️ Cancel'))
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
     message.chat.id,
     'What should I remind you about?',
@@ -80,16 +82,17 @@ def list_reminders(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_name)
 def reminder_name(message):
-  if (message.text == '✖️ Cancel'):
+  if (message.text == utils.keyboard_buttons['cancel']):
     bot.delete_state(message.from_user.id, message.chat.id)
-    bot.send_message(message.chat.id, 'Cancelled')
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
     return
 
   reply_markup = telebot.types.ReplyKeyboardMarkup(
     resize_keyboard=True,
     one_time_keyboard=True,
   )
-  reply_markup.row(telebot.types.KeyboardButton('✖️ Cancel'))
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
     message.chat.id,
     'Enter the date',
@@ -105,9 +108,10 @@ def reminder_name(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_date)
 def reminder_date(message):
-  if (message.text == '✖️ Cancel'):
+  if (message.text == utils.keyboard_buttons['cancel']):
     bot.delete_state(message.from_user.id, message.chat.id)
-    bot.send_message(message.chat.id, 'Cancelled')
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
     return
 
   date_string = message.text.strip().lower()
@@ -126,7 +130,7 @@ def reminder_date(message):
     telebot.types.KeyboardButton('Yes'),
     telebot.types.KeyboardButton('No'),
   )
-  reply_markup.row(telebot.types.KeyboardButton('✖️ Cancel'))
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
     message.chat.id,
     'Do you want to attach any files?',
@@ -142,6 +146,12 @@ def reminder_date(message):
 
 @bot.message_handler(state=StatesGroup.reminder_creation_files_prompt)
 def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
   if message.text == 'Yes':
     bot.send_message(message.chat.id, 'Ok, attach the files')
     bot.set_state(
@@ -149,22 +159,23 @@ def reminder_date(message):
       StatesGroup.reminder_creation_files,
       message.chat.id,
     )
-  else:
-    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-      reminder = db.Reminder(
-        name=data['reminder_creation_name'],
-        date=data['reminder_creation_date'],
-      )
-      db.Reminder.add(reminder)
+    return
 
-    bot.delete_state(message.from_user.id, message.chat.id)
-
-    reply_markup = utils.get_main_keyboard()
-    bot.send_message(
-      message.chat.id,
-      'Reminder is created',
-      reply_markup=reply_markup,
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    reminder = db.Reminder(
+      name=data['reminder_creation_name'],
+      date=data['reminder_creation_date'],
     )
+    db.Reminder.add(reminder)
+
+  bot.delete_state(message.from_user.id, message.chat.id)
+
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(
+    message.chat.id,
+    'Reminder is created',
+    reply_markup=reply_markup,
+  )
 
 @bot.message_handler(
   state=StatesGroup.reminder_creation_files,
@@ -206,6 +217,22 @@ def reminder_date(message):
   bot.send_message(
     message.chat.id,
     'Reminder is created',
+    reply_markup=reply_markup,
+  )
+
+@bot.message_handler()
+def reminder_date(message):
+  if message.text == utils.keyboard_buttons['add']:
+    return add_reminder(message)
+  if message.text == utils.keyboard_buttons['list_uncompleted']:
+    return list_uncompleted_reminders(message)
+  if message.text == utils.keyboard_buttons['list_completed']:
+    return list_completed_reminders(message)
+
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(
+    message.chat.id,
+    'Sorry, I don\'t understand',
     reply_markup=reply_markup,
   )
 
