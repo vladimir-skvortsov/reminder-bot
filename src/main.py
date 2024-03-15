@@ -1,16 +1,25 @@
 import os
 import telebot
 import datetime
-from dotenv import load_dotenv
-import ai
+import boto3
 import utils
 import db
+from dotenv import load_dotenv
 
 load_dotenv()
 
 bot_token = os.getenv('BOT_TOKEN')
 state_storage = telebot.storage.StateMemoryStorage()
 bot = telebot.TeleBot(bot_token, state_storage=state_storage)
+
+aws_access_key = os.getenv('AWS_ACCESS_KEY')
+aws_secret_key = os.getenv('AWS_SECRET_KEY')
+aws_bucket = os.getenv('AWS_BUCKET')
+s3 = boto3.client(
+  's3',
+  aws_access_key_id=aws_access_key,
+  aws_secret_access_key=aws_secret_key,
+)
 
 class StatesGroup(telebot.handler_backends.StatesGroup):
   reminder_creation_name = telebot.handler_backends.State()
@@ -25,12 +34,12 @@ def start(message):
     message.chat.id,
     'Welcome! I\'m your personal reminder bot.\n\n'
     '<b>Here are some useful commands for you:</b>\n\n'
-    '/start - start using bot / go to main menu\n'
-    '/help - open help\n'
-    '/add - add new reminder\n'
-    '/list - get a list of your reminders\n'
-    '/list_completed - get a list of completed reminders\n'
-    '/cancel - cancel the current operation',
+    '/start — start using bot / go to main menu\n'
+    '/help — open help\n'
+    '/add — add new reminder\n'
+    '/list — get a list of your reminders\n'
+    '/list_completed — get a list of completed reminders\n'
+    '/cancel — cancel the current operation',
     parse_mode='HTML',
     reply_markup=reply_markup,
   )
@@ -133,7 +142,7 @@ def reminder_date(message):
     bot.set_state(
       message.from_user.id,
       StatesGroup.reminder_creation_files,
-      message.chat.id
+      message.chat.id,
     )
   else:
     with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
@@ -157,29 +166,32 @@ def reminder_date(message):
   content_types=['document', 'photo', 'audio'],
 )
 def reminder_date(message):
+  file_id = None
+  file_name = None
+
   if message.document:
-    file_info = bot.get_file(message.document.file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
-
-    with open(message.document.file_name, 'wb') as new_file:
-      new_file.write(downloaded_file)
+    file_id = message.document.file_id
+    file_name = message.document.file_name
   elif message.photo:
-    file_info = bot.get_file(message.photo[-1].file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
-
-    with open('photo.jpg', 'wb') as new_file:
-      new_file.write(downloaded_file)
+    file_id = message.photo[-1].file_id
+    file_name = message.photo[-1].file_name
   elif message.audio:
-    file_info = bot.get_file(message.audio.file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
+    file_id = message.audio.file_id
+    file_name = message.audio.file_name
 
-    with open(message.audio.title + '.mp3', 'wb') as new_file:
-      new_file.write(downloaded_file)
+  file_info = bot.get_file(file_id)
+  downloaded_file = bot.download_file(file_info.file_path)
+  object_name = f'{file_id}_{file_name}'
+  with open(file_name, 'wb') as file:
+    file.write(downloaded_file)
+  s3.upload_file(file_name, aws_bucket, object_name)
+  os.remove(file_name)
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     reminder = db.Reminder(
       name=data['reminder_creation_name'],
       date=data['reminder_creation_date'],
+      files=[object_name],
     )
     db.Reminder.add(reminder)
 
