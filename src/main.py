@@ -50,9 +50,14 @@ def list_reminders(message):
 
 @bot.message_handler(commands=['list'])
 def list_reminders(message):
-  reminders = db.Reminder.get_all()
+  reminders = db.Reminder.get_all_undone()
   text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
+  bot.send_message(message.chat.id, text)
 
+@bot.message_handler(commands=['list_completed'])
+def list_reminders(message):
+  reminders = db.Reminder.get_all_done()
+  text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
   bot.send_message(message.chat.id, text)
 
 @bot.message_handler(commands=['add'])

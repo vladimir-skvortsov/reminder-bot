@@ -1,10 +1,9 @@
 import os
-from sqlalchemy import create_engine, Column, String, Integer, DateTime
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
-import datetime
 
 load_dotenv()
 
@@ -19,16 +18,27 @@ class Reminder(Base):
 
   id = Column(Integer, primary_key=True)
   name = Column(String)
+  is_done = Column(Boolean, default=False)
   date = Column(DateTime)
   files = Column(ARRAY(String))
 
   def __repr__(self) -> str:
-    return f'Reminder(id={self.id}, name={self.name}, date={self.date}, files={self.files})'
+    return f'Reminder(id={self.id}, name={self.name}, is_done={self.is_done}, date={self.date}, files={self.files})'
 
   @classmethod
   def get_all(cls):
     session = Session()
     return session.query(cls).all()
+
+  @classmethod
+  def get_all_done(cls):
+    session = Session()
+    return session.query(cls).filter_by(is_done=True).all()
+
+  @classmethod
+  def get_all_undone(cls):
+    session = Session()
+    return session.query(cls).filter_by(is_done=False).all()
 
   @classmethod
   def add(cls, reminder):
