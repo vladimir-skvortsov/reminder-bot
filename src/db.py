@@ -23,7 +23,7 @@ class Reminder(Base):
   files = Column(ARRAY(String))
 
   def __repr__(self) -> str:
-    return f'Reminder(id={self.id}, name={self.name}, date={self.date})'
+    return f'Reminder(id={self.id}, name={self.name}, date={self.date}, files={self.files})'
 
   @classmethod
   def get_all(cls):
