@@ -6,6 +6,7 @@ import utils
 import db
 import re
 from dotenv import load_dotenv
+import dateparser
 
 load_dotenv()
 
@@ -296,8 +297,8 @@ def reminder_date(message):
   date_string = message.text.strip().lower()
 
   try:
-    date = datetime.datetime.strptime(date_string, '%d.%m.%Y')
-  except:
+    date = dateparser.parse(date_string)
+  except Exception as e:
     bot.send_message(message.chat.id, 'I don\'t understand')
     return
 
