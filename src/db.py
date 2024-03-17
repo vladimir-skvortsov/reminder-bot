@@ -23,6 +23,8 @@ class Reminder(Base):
   date = Column(DateTime)
   date_completed = Column(DateTime)
   files = Column(ARRAY(String), default=[])
+  is_periodic = Column(Boolean, default=False)
+  period_days = Column(Integer)
 
   def __repr__(self) -> str:
     return f'Reminder(id={self.id}, name={self.name}, is_done={self.is_done}, date={self.date}, files={self.files})'
@@ -68,7 +70,12 @@ class Reminder(Base):
       session.commit()
 
 if __name__ == '__main__':
-  reminders = Reminder.get_all()
-  for reminder in reminders:
-    Reminder.delete(reminder.id)
-  print(reminders)
+  from sqlalchemy import create_engine
+
+  engine = create_engine('postgresql://postgres:postgres@localhost/postgres')
+  Base.metadata.create_all(engine)
+
+  # reminders = Reminder.get_all()
+  # for reminder in reminders:
+  #   Reminder.delete(reminder.id)
+  # print(reminders)
