@@ -5,6 +5,11 @@ keyboard_buttons = {
   'list_uncompleted': '📄 List reminders',
   'list_completed': '✔️ List completed reminders',
   'cancel': '✖️ Cancel',
+  'mark_completed': '✔️ Mark completed',
+  'mark_uncompleted': '✖️ Mark uncompleted',
+  'edit': '✏️ Edit',
+  'delete': '🗑️ Delete',
+  'keep_the_same': '👍 Keep the same',
 }
 
 def format_reminder_date(date):

@@ -31,7 +31,12 @@ class StatesGroup(telebot.handler_backends.StatesGroup):
   reminder_creation_files_prompt = telebot.handler_backends.State()
   reminder_creation_files = telebot.handler_backends.State()
 
+  reminder_editing_name = telebot.handler_backends.State()
   reminder_editing_date = telebot.handler_backends.State()
+  reminder_editing_files_prompt = telebot.handler_backends.State()
+  reminder_editing_files = telebot.handler_backends.State()
+
+  reminder_returning_date = telebot.handler_backends.State()
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -87,13 +92,41 @@ def callback_query(call):
     text = utils.reminder_to_message(reminder)
 
     inline_markup = telebot.types.InlineKeyboardMarkup()
+    if reminder.is_done:
+      inline_markup.row(
+        telebot.types.InlineKeyboardButton(
+          utils.keyboard_buttons['math_uncompleted'],
+          callback_data=f'mark_uncompleted_{reminder_id}',
+        ),
+        telebot.types.InlineKeyboardButton(
+          utils.keyboard_buttons['edit'],
+          callback_data=f'edit_{reminder_id}',
+        ),
+        telebot.types.InlineKeyboardButton(
+          utils.keyboard_buttons['delete'],
+          callback_data=f'delete_{reminder_id}',
+        ),
+      )
+    else:
+      inline_markup.row(
+        telebot.types.InlineKeyboardButton(
+          utils.keyboard_buttons['mark_completed'],
+          callback_data=f'mark_completed_{reminder_id}',
+        ),
+        telebot.types.InlineKeyboardButton(
+          utils.keyboard_buttons['edit'],
+          callback_data=f'edit_{reminder_id}',
+        ),
+        telebot.types.InlineKeyboardButton(
+          utils.keyboard_buttons['delete'],
+          callback_data=f'delete_{reminder_id}',
+        ),
+      )
     inline_markup.row(
-      telebot.types.InlineKeyboardButton('✖️ Mark uncompleted', callback_data=f'mark_uncompleted_{reminder_id}')
-      if reminder.is_done else telebot.types.InlineKeyboardButton('✔️ Mark completed', callback_data=f'mark_completed_{reminder_id}'),
-      telebot.types.InlineKeyboardButton('🗑️ Delete', callback_data=f'delete_{reminder_id}'),
-    )
-    inline_markup.row(
-      telebot.types.InlineKeyboardButton('Back to list', callback_data=f'back_to_list'),
+      telebot.types.InlineKeyboardButton(
+        'Back to list',
+        callback_data=f'back_to_list',
+      ),
     )
 
     bot.edit_message_text(
@@ -142,11 +175,11 @@ def callback_query(call):
     )
     bot.set_state(
       user_id,
-      StatesGroup.reminder_editing_date,
+      StatesGroup.reminder_returning_date,
       chat_id
     )
     with bot.retrieve_data(user_id, chat_id) as data:
-      data['reminder_editing_id'] = reminder_id
+      data['reminder_returning_id'] = reminder_id
   elif data.startswith('delete_'):
     reminder_id = int(re.findall('\d+', data)[0])
     db.Reminder.delete(reminder_id)
@@ -168,6 +201,29 @@ def callback_query(call):
       )
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
+  elif data.startswith('edit_'):
+    reminder_id = int(re.findall('\d+', data)[0])
+    reminder = db.Reminder.get(reminder_id)
+    reply_markup = telebot.types.ReplyKeyboardMarkup(
+      resize_keyboard=True,
+      one_time_keyboard=False,
+    )
+    reply_markup.row(
+      telebot.types.KeyboardButton(utils.keyboard_buttons['keep_the_same']),
+      telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']),
+    )
+    bot.send_message(
+      chat_id,
+      'Enter the name',
+      reply_markup=reply_markup,
+    )
+    bot.set_state(
+      user_id,
+      StatesGroup.reminder_editing_name,
+      chat_id
+    )
+    with bot.retrieve_data(user_id, chat_id) as data:
+      data['reminder_editing_id'] = reminder_id
   elif data.startswith('back_to_list'):
     reminders = db.Reminder.get_all_uncompleted()
     page_reminders = reminders[:reminders_per_page]
@@ -425,7 +481,163 @@ def reminder_date(message):
     reply_markup=reply_markup,
   )
 
+@bot.message_handler(state=StatesGroup.reminder_editing_name)
+def reminder_name(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    if (message.text == utils.keyboard_buttons['keep_the_same']):
+      reminder_id = data['reminder_editing_id']
+      reminder = db.Reminder.get(reminder_id)
+      data['reminder_editing_name'] = reminder.name
+    else:
+      data['reminder_editing_name'] = message.text.strip()
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton(utils.keyboard_buttons['keep_the_same']),
+    telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']),
+  )
+
+  bot.send_message(
+    message.chat.id,
+    'Enter the date',
+    reply_markup=reply_markup,
+  )
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_editing_date,
+    message.chat.id
+  )
+
 @bot.message_handler(state=StatesGroup.reminder_editing_date)
+def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    if (message.text == utils.keyboard_buttons['keep_the_same']):
+      reminder_id = data['reminder_editing_id']
+      reminder = db.Reminder.get(reminder_id)
+      data['reminder_editing_date'] = reminder.date
+    else:
+      date_string = message.text.strip().lower()
+
+      try:
+        date = dateparser.parse(date_string)
+      except Exception as e:
+        bot.send_message(message.chat.id, 'I don\'t understand')
+        return
+
+      data['reminder_editing_date'] = date
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton(utils.keyboard_buttons['keep_the_same']),
+  )
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
+  bot.send_message(
+    message.chat.id,
+    'Do you want to edit files?',
+    reply_markup=reply_markup,
+  )
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_editing_files_prompt,
+    message.chat.id
+  )
+
+@bot.message_handler(state=StatesGroup.reminder_editing_files_prompt)
+def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  if message.text == 'Yes':
+    bot.send_message(message.chat.id, 'Ok, attach the files')
+    bot.set_state(
+      message.from_user.id,
+      StatesGroup.reminder_editing_files,
+      message.chat.id,
+    )
+    return
+
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    reminder_id = data['reminder_editing_id']
+    reminder = db.Reminder.get(reminder_id)
+    reminder.name = data['reminder_editing_name']
+    reminder.date = data['reminder_editing_date']
+    db.Reminder.update(reminder)
+
+  bot.delete_state(message.from_user.id, message.chat.id)
+
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(
+    message.chat.id,
+    'Reminder is edited',
+    reply_markup=reply_markup,
+  )
+
+@bot.message_handler(
+  state=StatesGroup.reminder_editing_files,
+  content_types=['document', 'photo', 'audio'],
+)
+def reminder_date(message):
+  file_id = None
+  file_name = None
+
+  if message.document:
+    file_id = message.document.file_id
+    file_name = message.document.file_name
+  elif message.photo:
+    file_id = message.photo[-1].file_id
+    file_name = message.photo[-1].file_name
+  elif message.audio:
+    file_id = message.audio.file_id
+    file_name = message.audio.file_name
+
+  file_info = bot.get_file(file_id)
+  downloaded_file = bot.download_file(file_info.file_path)
+  object_name = f'{file_id}_{file_name}'
+  with open(file_name, 'wb') as file:
+    file.write(downloaded_file)
+  s3.upload_file(file_name, aws_bucket, object_name)
+  os.remove(file_name)
+
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    reminder_id = data['reminder_editing_id']
+    reminder = db.Reminder.get(reminder_id)
+    reminder.name = data['reminder_editing_name']
+    reminder.date = data['reminder_editing_date']
+    reminder.date = [object_name]
+    db.Reminder.update(reminder)
+
+  bot.delete_state(message.from_user.id, message.chat.id)
+
+  reply_markup = utils.get_main_keyboard()
+  bot.send_message(
+    message.chat.id,
+    'Reminder is edited',
+    reply_markup=reply_markup,
+  )
+
+@bot.message_handler(state=StatesGroup.reminder_returning_date)
 def reminder_date(message):
   if (message.text == utils.keyboard_buttons['cancel']):
     bot.delete_state(message.from_user.id, message.chat.id)
@@ -443,7 +655,7 @@ def reminder_date(message):
     return
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-    reminder_id = data['reminder_editing_id']
+    reminder_id = data['reminder_returning_id']
 
   reminder = db.Reminder.get(reminder_id)
   reminder.is_done = False
