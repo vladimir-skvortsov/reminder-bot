@@ -66,7 +66,7 @@ def list_uncompleted_reminders(message):
   inline_markup.row(*pages_buttons)
   if len(reminders) > len(page_reminders):
     inline_markup.row(
-      telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+      telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1')
     )
 
   bot.send_message(message.chat.id, text, reply_markup=inline_markup)
@@ -117,7 +117,7 @@ def callback_query(call):
     inline_markup.row(*pages_buttons)
     if len(reminders) > len(page_reminders):
       inline_markup.row(
-        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1'),
       )
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
@@ -138,7 +138,7 @@ def callback_query(call):
     inline_markup.row(*pages_buttons)
     if len(reminders) > len(page_reminders):
       inline_markup.row(
-        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1'),
       )
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
@@ -156,7 +156,7 @@ def callback_query(call):
     inline_markup.row(*pages_buttons)
     if len(reminders) > len(page_reminders):
       inline_markup.row(
-        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1'),
       )
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
@@ -176,7 +176,7 @@ def list_completed_reminders(message):
   inline_markup.row(*pages_buttons)
   if len(reminders) > len(page_reminders):
     inline_markup.row(
-      telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+      telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_completed_1')
     )
 
   bot.send_message(message.chat.id, text, reply_markup=inline_markup)
