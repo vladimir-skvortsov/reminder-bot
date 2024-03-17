@@ -26,6 +26,11 @@ class Reminder(Base):
     return f'Reminder(id={self.id}, name={self.name}, is_done={self.is_done}, date={self.date}, files={self.files})'
 
   @classmethod
+  def get(cls, id):
+    session = Session()
+    return session.query(cls).get(id)
+
+  @classmethod
   def get_all(cls):
     session = Session()
     return session.query(cls).all()

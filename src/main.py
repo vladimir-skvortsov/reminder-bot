@@ -4,6 +4,7 @@ import datetime
 import boto3
 import utils
 import db
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +21,8 @@ s3 = boto3.client(
   aws_access_key_id=aws_access_key,
   aws_secret_access_key=aws_secret_key,
 )
+
+reminders_per_page = 7
 
 class StatesGroup(telebot.handler_backends.StatesGroup):
   reminder_creation_name = telebot.handler_backends.State()
@@ -51,22 +54,138 @@ def cancel(message):
 @bot.message_handler(commands=['list'])
 def list_uncompleted_reminders(message):
   reminders = db.Reminder.get_all_uncompleted()
-  text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
-  reply_markup = utils.get_main_keyboard()
-  bot.send_message(message.chat.id, text, reply_markup=reply_markup)
+  page_reminders = reminders[:reminders_per_page]
+
+  text = utils.reminders_to_message(page_reminders)
+
+  inline_markup = telebot.types.InlineKeyboardMarkup()
+  pages_buttons = [
+    telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
+    for index, reminder in enumerate(page_reminders)
+  ]
+  inline_markup.row(*pages_buttons)
+  if len(reminders) > len(page_reminders):
+    inline_markup.row(
+      telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+    )
+
+  bot.send_message(message.chat.id, text, reply_markup=inline_markup)
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+  data = call.data
+  chat_id = call.json['message']['chat']['id']
+  message_id = call.json['message']['message_id']
+
+  if data.startswith('reminder_'):
+    reminder_id = int(re.findall('\d+', data)[0])
+    reminder = db.Reminder.get(reminder_id)
+    text = utils.reminder_to_message(reminder)
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    inline_markup.row(
+      telebot.types.InlineKeyboardButton('✔️ Mark completed', callback_data=f'mark_completed_{reminder_id}'),
+      telebot.types.InlineKeyboardButton('🗑️ Delete', callback_data=f'delete_{reminder_id}'),
+    )
+    inline_markup.row(
+      telebot.types.InlineKeyboardButton('Back to list', callback_data=f'back_to_list'),
+    )
+
+    bot.edit_message_text(
+      text,
+      chat_id,
+      message_id,
+      parse_mode='HTML',
+      reply_markup=inline_markup,
+    )
+  elif data.startswith('mark_completed_'):
+    reminder_id = int(re.findall('\d+', data)[0])
+    reminder = db.Reminder.get(reminder_id)
+    reminder.is_done = True
+    db.Reminder.update(reminder)
+
+    reminders = db.Reminder.get_all_uncompleted()
+    page_reminders = reminders[:reminders_per_page]
+
+    text = utils.reminders_to_message(page_reminders)
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    pages_buttons = [
+      telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
+      for index, reminder in enumerate(page_reminders)
+    ]
+    inline_markup.row(*pages_buttons)
+    if len(reminders) > len(page_reminders):
+      inline_markup.row(
+        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+      )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
+  elif data.startswith('delete_'):
+    reminder_id = int(re.findall('\d+', data)[0])
+    db.Reminder.delete(reminder_id)
+
+    reminders = db.Reminder.get_all_uncompleted()
+    page_reminders = reminders[:reminders_per_page]
+
+    text = utils.reminders_to_message(page_reminders)
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    pages_buttons = [
+      telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
+      for index, reminder in enumerate(page_reminders)
+    ]
+    inline_markup.row(*pages_buttons)
+    if len(reminders) > len(page_reminders):
+      inline_markup.row(
+        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+      )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
+  elif data.startswith('back_to_list'):
+    reminders = db.Reminder.get_all_uncompleted()
+    page_reminders = reminders[:reminders_per_page]
+
+    text = utils.reminders_to_message(page_reminders)
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+    pages_buttons = [
+      telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
+      for index, reminder in enumerate(page_reminders)
+    ]
+    inline_markup.row(*pages_buttons)
+    if len(reminders) > len(page_reminders):
+      inline_markup.row(
+        telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+      )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
 
 @bot.message_handler(commands=['list_completed'])
 def list_completed_reminders(message):
   reminders = db.Reminder.get_all_completed()
-  text = '\n'.join(list(map(lambda reminder: f'- {reminder.name}', reminders)))
-  reply_markup = utils.get_main_keyboard()
-  bot.send_message(message.chat.id, text, reply_markup)
+  page_reminders = reminders[:reminders_per_page]
+
+  text = utils.reminders_to_message(page_reminders)
+
+  inline_markup = telebot.types.InlineKeyboardMarkup()
+  pages_buttons = [
+    telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
+    for index, reminder in enumerate(page_reminders)
+  ]
+  inline_markup.row(*pages_buttons)
+  if len(reminders) > len(page_reminders):
+    inline_markup.row(
+      telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_1')
+    )
+
+  bot.send_message(message.chat.id, text, reply_markup=inline_markup)
 
 @bot.message_handler(commands=['add'])
 def add_reminder(message):
   reply_markup = telebot.types.ReplyKeyboardMarkup(
     resize_keyboard=True,
-    one_time_keyboard=True,
+    one_time_keyboard=False,
   )
   reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
@@ -90,7 +209,7 @@ def reminder_name(message):
 
   reply_markup = telebot.types.ReplyKeyboardMarkup(
     resize_keyboard=True,
-    one_time_keyboard=True,
+    one_time_keyboard=False,
   )
   reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
@@ -124,7 +243,7 @@ def reminder_date(message):
 
   reply_markup = telebot.types.ReplyKeyboardMarkup(
     resize_keyboard=True,
-    one_time_keyboard=True,
+    one_time_keyboard=False,
   )
   reply_markup.row(
     telebot.types.KeyboardButton('Yes'),
