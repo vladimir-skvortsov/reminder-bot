@@ -447,6 +447,7 @@ def reminder_date(message):
 
   reminder = db.Reminder.get(reminder_id)
   reminder.is_done = False
+  reminder.data = date
   reminder.date_completed = None
   db.Reminder.update(reminder)
 
