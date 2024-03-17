@@ -1,6 +1,5 @@
 import os
 import telebot
-import datetime
 import boto3
 import utils
 import db
