@@ -4,8 +4,9 @@ import boto3
 import utils
 import db
 import re
-from dotenv import load_dotenv
 import dateparser
+import datetime
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -102,6 +103,7 @@ def callback_query(call):
     reminder_id = int(re.findall('\d+', data)[0])
     reminder = db.Reminder.get(reminder_id)
     reminder.is_done = True
+    reminder.date_completed = datetime.datetime.now()
     db.Reminder.update(reminder)
 
     reminders = db.Reminder.get_all_uncompleted()

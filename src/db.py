@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, Column, String, Integer, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import desc
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +21,7 @@ class Reminder(Base):
   name = Column(String)
   is_done = Column(Boolean, default=False)
   date = Column(DateTime)
+  date_completed = Column(DateTime)
   files = Column(ARRAY(String))
 
   def __repr__(self) -> str:
@@ -38,7 +40,7 @@ class Reminder(Base):
   @classmethod
   def get_all_completed(cls):
     session = Session()
-    return session.query(cls).filter_by(is_done=True).all()
+    return session.query(cls).filter_by(is_done=True).order_by(desc(Reminder.date)).all()
 
   @classmethod
   def get_all_uncompleted(cls):
@@ -67,4 +69,6 @@ class Reminder(Base):
 
 if __name__ == '__main__':
   reminders = Reminder.get_all()
+  for reminder in reminders:
+    Reminder.delete(reminder.id)
   print(reminders)
