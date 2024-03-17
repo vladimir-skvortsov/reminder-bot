@@ -59,12 +59,12 @@ def list_uncompleted_reminders(message):
   text = utils.reminders_to_message(page_reminders)
 
   inline_markup = telebot.types.InlineKeyboardMarkup()
-  pages_buttons = [
+  reminders_buttons = [
     telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
     for index, reminder in enumerate(page_reminders)
   ]
-  inline_markup.row(*pages_buttons)
-  if len(reminders) > len(page_reminders):
+  inline_markup.row(*reminders_buttons)
+  if len(reminders) > reminders_per_page:
     inline_markup.row(
       telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1')
     )
@@ -110,11 +110,11 @@ def callback_query(call):
     text = utils.reminders_to_message(page_reminders)
 
     inline_markup = telebot.types.InlineKeyboardMarkup()
-    pages_buttons = [
+    reminders_buttons = [
       telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
       for index, reminder in enumerate(page_reminders)
     ]
-    inline_markup.row(*pages_buttons)
+    inline_markup.row(*reminders_buttons)
     if len(reminders) > len(page_reminders):
       inline_markup.row(
         telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1'),
@@ -131,11 +131,11 @@ def callback_query(call):
     text = utils.reminders_to_message(page_reminders)
 
     inline_markup = telebot.types.InlineKeyboardMarkup()
-    pages_buttons = [
+    reminders_buttons = [
       telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
       for index, reminder in enumerate(page_reminders)
     ]
-    inline_markup.row(*pages_buttons)
+    inline_markup.row(*reminders_buttons)
     if len(reminders) > len(page_reminders):
       inline_markup.row(
         telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1'),
@@ -149,15 +149,75 @@ def callback_query(call):
     text = utils.reminders_to_message(page_reminders)
 
     inline_markup = telebot.types.InlineKeyboardMarkup()
-    pages_buttons = [
+    reminders_buttons = [
       telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
       for index, reminder in enumerate(page_reminders)
     ]
-    inline_markup.row(*pages_buttons)
+    inline_markup.row(*reminders_buttons)
     if len(reminders) > len(page_reminders):
       inline_markup.row(
         telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_uncompleted_1'),
       )
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
+  elif data.startswith('page_uncompleted_'):
+    page_index = int(re.findall('\d+', data)[0])
+    reminders = db.Reminder.get_all_uncompleted()
+    start_index = page_index * reminders_per_page
+    end_index = (page_index + 1) * reminders_per_page
+    page_reminders = reminders[start_index:end_index]
+
+    text = utils.reminders_to_message(page_reminders, start_index)
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+
+    reminders_buttons = [
+      telebot.types.InlineKeyboardButton(start_index + index + 1, callback_data=f'reminder_{reminder.id}')
+      for index, reminder in enumerate(page_reminders)
+    ]
+    inline_markup.row(*reminders_buttons)
+
+    pages_buttons = []
+    if page_index != 0:
+      pages_buttons.append(
+        telebot.types.InlineKeyboardButton(f'<< Page {page_index}', callback_data=f'page_uncompleted_{page_index - 1}'),
+      )
+    if len(reminders) > (page_index + 1) * reminders_per_page:
+      pages_buttons.append(
+        telebot.types.InlineKeyboardButton(f'Page {page_index + 2} >>', callback_data=f'page_uncompleted_{page_index + 1}'),
+      )
+    if len(pages_buttons):
+      inline_markup.row(*pages_buttons)
+
+    bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
+  elif data.startswith('page_completed_'):
+    page_index = int(re.findall('\d+', data)[0])
+    reminders = db.Reminder.get_all_completed()
+    start_index = page_index * reminders_per_page
+    end_index = (page_index + 1) * reminders_per_page
+    page_reminders = reminders[start_index:end_index]
+
+    text = utils.reminders_to_message(page_reminders, start_index)
+
+    inline_markup = telebot.types.InlineKeyboardMarkup()
+
+    reminders_buttons = [
+      telebot.types.InlineKeyboardButton(start_index + index + 1, callback_data=f'reminder_{reminder.id}')
+      for index, reminder in enumerate(page_reminders)
+    ]
+    inline_markup.row(*reminders_buttons)
+
+    pages_buttons = []
+    if page_index != 0:
+      pages_buttons.append(
+        telebot.types.InlineKeyboardButton(f'<< Page {page_index}', callback_data=f'page_completed_{page_index - 1}'),
+      )
+    if len(reminders) > (page_index + 1) * reminders_per_page:
+      pages_buttons.append(
+        telebot.types.InlineKeyboardButton(f'Page {page_index + 2} >>', callback_data=f'page_completed_{page_index + 1}'),
+      )
+    if len(pages_buttons):
+      inline_markup.row(*pages_buttons)
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
 
@@ -169,12 +229,12 @@ def list_completed_reminders(message):
   text = utils.reminders_to_message(page_reminders)
 
   inline_markup = telebot.types.InlineKeyboardMarkup()
-  pages_buttons = [
+  reminders_buttons = [
     telebot.types.InlineKeyboardButton(index + 1, callback_data=f'reminder_{reminder.id}')
     for index, reminder in enumerate(page_reminders)
   ]
-  inline_markup.row(*pages_buttons)
-  if len(reminders) > len(page_reminders):
+  inline_markup.row(*reminders_buttons)
+  if len(reminders) > reminders_per_page:
     inline_markup.row(
       telebot.types.InlineKeyboardButton('Page 2 >>', callback_data=f'page_completed_1')
     )

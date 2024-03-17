@@ -24,11 +24,11 @@ def get_main_keyboard():
   )
   return reply_markup
 
-def reminders_to_message(reminders):
+def reminders_to_message(reminders, start_index=0):
   message = ''
   for index, reminder in enumerate(reminders):
     formatted_date = format_reminder_date(reminder.date)
-    message += f'{index + 1}. {reminder.name} ({formatted_date})\n'
+    message += f'{start_index + index + 1}. {reminder.name} ({formatted_date})\n'
 
   message += '\nChoose reminder to edit:'
 
