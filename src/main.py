@@ -734,7 +734,6 @@ def reminder_date(message):
     reminder_id = data['reminder_editing_id']
     reminder = Reminder.get(reminder_id)
     data['reminder_editing_is_periodic'] = reminder.is_periodic if message.text == utils.keyboard_buttons['keep_the_same'] else False
-    print(data['reminder_editing_is_periodic'])
     data['reminder_editing_period_days'] = 0
 
   reply_markup = telebot.types.ReplyKeyboardMarkup(
