@@ -531,6 +531,8 @@ def reminder_date(message):
     reply_markup=reply_markup,
   )
 
+creation_media_groups = {}
+
 @bot.message_handler(
   state=StatesGroup.reminder_creation_files,
   content_types=['document', 'photo', 'audio'],
@@ -548,6 +550,23 @@ def reminder_date(message):
   elif message.audio:
     file_id = message.audio.file_id
     file_name = message.audio.file_name
+
+  if message.media_group_id:
+    if not message.chat.id in creation_media_groups:
+      creation_media_groups[message.chat.id] = {
+        'files': [],
+        'last_len': 0,
+        'user_id': message.from_user.id,
+        'chat_id': message.chat.id,
+      }
+
+    creation_media_groups[message.chat.id]['last_check'] = datetime.datetime.now()
+    creation_media_groups[message.chat.id]['last_len'] += 1
+    creation_media_groups[message.chat.id]['files'].append({
+      'file_id': file_id,
+      'file_name': file_name,
+    })
+    return
 
   file_info = bot.get_file(file_id)
   downloaded_file = bot.download_file(file_info.file_path)
@@ -786,6 +805,8 @@ def reminder_date(message):
     reply_markup=reply_markup,
   )
 
+editing_media_groups = {}
+
 @bot.message_handler(
   state=StatesGroup.reminder_editing_files,
   content_types=['document', 'photo', 'audio'],
@@ -803,6 +824,23 @@ def reminder_date(message):
   elif message.audio:
     file_id = message.audio.file_id
     file_name = message.audio.file_name
+
+  if message.media_group_id:
+    if not message.chat.id in creation_media_groups:
+      creation_media_groups[message.chat.id] = {
+        'files': [],
+        'last_len': 0,
+        'user_id': message.from_user.id,
+        'chat_id': message.chat.id,
+      }
+
+    creation_media_groups[message.chat.id]['last_check'] = datetime.datetime.now()
+    creation_media_groups[message.chat.id]['last_len'] += 1
+    creation_media_groups[message.chat.id]['files'].append({
+      'file_id': file_id,
+      'file_name': file_name,
+    })
+    return
 
   file_info = bot.get_file(file_id)
   downloaded_file = bot.download_file(file_info.file_path)
@@ -904,5 +942,97 @@ if __name__ == '__main__':
         else:
           reminder.is_notified = True
         Reminder.update(reminder)
+
+    for chat_id in list(creation_media_groups):
+      media_group = creation_media_groups[chat_id]
+
+      if media_group['last_check'] + datetime.timedelta(seconds=1) < now \
+        and media_group['last_len'] == len(media_group['files']):
+          objects = []
+
+          for file in media_group['files']:
+            file_id = file['file_id']
+            file_name = file['file_name']
+            file_info = bot.get_file(file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            object_name = f'{file_id}_{file_name}'
+            with open(file_name, 'wb') as file:
+              file.write(downloaded_file)
+            s3.upload_file(file_name, aws_bucket, object_name)
+            os.remove(file_name)
+            objects.append(object_name)
+
+          user_id = media_group['user_id']
+          chat_id = media_group['chat_id']
+
+          del creation_media_groups[chat_id]
+
+          with bot.retrieve_data(user_id, chat_id) as data:
+            reminder = Reminder(
+              name=data['reminder_creation_name'],
+              date=data['reminder_creation_date'],
+              files=objects,
+              is_periodic=data['reminder_creation_is_periodic'],
+              period_days=data['reminder_creation_period_days'],
+              chat_id=chat_id,
+            )
+            Reminder.add(reminder)
+
+          bot.delete_state(user_id, chat_id)
+
+          reply_markup = utils.get_main_keyboard()
+          bot.send_message(
+            chat_id,
+            'Reminder is created',
+            reply_markup=reply_markup,
+          )
+      else:
+        media_group['last_check'] = now
+        media_group['last_len'] = len(media_group['files'])
+
+    for chat_id in list(editing_media_groups):
+      media_group = editing_media_groups[chat_id]
+
+      if media_group['last_check'] + datetime.timedelta(seconds=1) < now \
+        and media_group['last_len'] == len(media_group['files']):
+          objects = []
+
+          for file in media_group['files']:
+            file_id = file['file_id']
+            file_name = file['file_name']
+            file_info = bot.get_file(file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            object_name = f'{file_id}_{file_name}'
+            with open(file_name, 'wb') as file:
+              file.write(downloaded_file)
+            s3.upload_file(file_name, aws_bucket, object_name)
+            os.remove(file_name)
+            objects.append(object_name)
+
+          user_id = media_group['user_id']
+          chat_id = media_group['chat_id']
+
+          del editing_media_groups[chat_id]
+
+          with bot.retrieve_data(user_id, chat_id) as data:
+            reminder_id = data['reminder_editing_id']
+            reminder = Reminder.get(reminder_id)
+            reminder.name = data['reminder_editing_name']
+            reminder.date = data['reminder_editing_date']
+            reminder.date = [object_name]
+            reminder.is_notified = False
+            Reminder.update(reminder)
+
+          bot.delete_state(user_id, chat_id)
+
+          reply_markup = utils.get_main_keyboard()
+          bot.send_message(
+            chat_id,
+            'Reminder is edited',
+            reply_markup=reply_markup,
+          )
+      else:
+        media_group['last_check'] = now
+        media_group['last_len'] = len(media_group['files'])
 
     time.sleep(1)
