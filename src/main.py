@@ -385,7 +385,7 @@ def reminder_date(message):
 
   try:
     date = dateparser.parse(date_string)
-  except Exception as e:
+  except:
     bot.send_message(message.chat.id, 'I don\'t understand')
     return
 
@@ -466,7 +466,7 @@ def reminder_date(message):
 
   try:
     days = int(user_input)
-  except Exception as e:
+  except:
     bot.send_message(message.chat.id, 'I don\'t understand')
     return
 
@@ -631,7 +631,7 @@ def reminder_date(message):
 
       try:
         date = dateparser.parse(date_string)
-      except Exception as e:
+      except:
         bot.send_message(message.chat.id, 'I don\'t understand')
         return
 
@@ -721,7 +721,7 @@ def reminder_date(message):
 
   try:
     days = int(user_input)
-  except Exception as e:
+  except:
     bot.send_message(message.chat.id, 'I don\'t understand')
     return
 
@@ -842,7 +842,7 @@ def reminder_date(message):
 
   try:
     date = dateparser.parse(date_string)
-  except Exception as e:
+  except:
     print(e)
     bot.send_message(message.chat.id, 'I don\'t understand')
     return
