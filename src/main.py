@@ -68,6 +68,16 @@ def cancel(message):
 @bot.message_handler(commands=['list'])
 def list_uncompleted_reminders(message):
   reminders = Reminder.get_all_uncompleted()
+
+  if len(reminders) == 0:
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(
+      message.chat.id,
+      'There are no reminders yet.',
+      reply_markup=reply_markup,
+    )
+    return
+
   page_reminders = reminders[:reminders_per_page]
 
   text = utils.reminders_to_message(page_reminders)
@@ -324,6 +334,16 @@ def callback_query(call):
 @bot.message_handler(commands=['list_completed'])
 def list_completed_reminders(message):
   reminders = Reminder.get_all_completed()
+
+  if len(reminders) == 0:
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(
+      message.chat.id,
+      'There are no completed reminders yet.',
+      reply_markup=reply_markup,
+    )
+    return
+
   page_reminders = reminders[:reminders_per_page]
 
   text = utils.reminders_to_message(page_reminders)
