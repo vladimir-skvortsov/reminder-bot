@@ -843,7 +843,6 @@ def reminder_date(message):
   try:
     date = dateparser.parse(date_string)
   except:
-    print(e)
     bot.send_message(message.chat.id, 'I don\'t understand')
     return
 
