@@ -2,13 +2,13 @@ import os
 import telebot
 import boto3
 import utils
-import db
 import re
 import dateparser
 import datetime
 import time
 import threading
 from dotenv import load_dotenv
+from db import Reminder
 
 load_dotenv()
 
@@ -67,7 +67,7 @@ def cancel(message):
 
 @bot.message_handler(commands=['list'])
 def list_uncompleted_reminders(message):
-  reminders = db.Reminder.get_all_uncompleted()
+  reminders = Reminder.get_all_uncompleted()
   page_reminders = reminders[:reminders_per_page]
 
   text = utils.reminders_to_message(page_reminders)
@@ -94,7 +94,7 @@ def callback_query(call):
 
   if data.startswith('reminder_'):
     reminder_id = int(re.findall('\d+', data)[0])
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     text = utils.reminder_to_message(reminder)
 
     inline_markup = telebot.types.InlineKeyboardMarkup()
@@ -144,12 +144,12 @@ def callback_query(call):
     )
   elif data.startswith('mark_completed_'):
     reminder_id = int(re.findall('\d+', data)[0])
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     reminder.is_done = True
     reminder.date_completed = datetime.datetime.now()
-    db.Reminder.update(reminder)
+    Reminder.update(reminder)
 
-    reminders = db.Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted()
     page_reminders = reminders[:reminders_per_page]
 
     text = utils.reminders_to_message(page_reminders)
@@ -168,7 +168,7 @@ def callback_query(call):
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('mark_uncompleted_'):
     reminder_id = int(re.findall('\d+', data)[0])
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     reply_markup = telebot.types.ReplyKeyboardMarkup(
       resize_keyboard=True,
       one_time_keyboard=False,
@@ -188,9 +188,9 @@ def callback_query(call):
       data['reminder_returning_id'] = reminder_id
   elif data.startswith('delete_'):
     reminder_id = int(re.findall('\d+', data)[0])
-    db.Reminder.delete(reminder_id)
+    Reminder.delete(reminder_id)
 
-    reminders = db.Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted()
     page_reminders = reminders[:reminders_per_page]
 
     text = utils.reminders_to_message(page_reminders)
@@ -209,7 +209,7 @@ def callback_query(call):
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('edit_'):
     reminder_id = int(re.findall('\d+', data)[0])
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     reply_markup = telebot.types.ReplyKeyboardMarkup(
       resize_keyboard=True,
       one_time_keyboard=False,
@@ -231,7 +231,7 @@ def callback_query(call):
     with bot.retrieve_data(user_id, chat_id) as data:
       data['reminder_editing_id'] = reminder_id
   elif data.startswith('back_to_list'):
-    reminders = db.Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted()
     page_reminders = reminders[:reminders_per_page]
 
     text = utils.reminders_to_message(page_reminders)
@@ -250,7 +250,7 @@ def callback_query(call):
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('page_uncompleted_'):
     page_index = int(re.findall('\d+', data)[0])
-    reminders = db.Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted()
     start_index = page_index * reminders_per_page
     end_index = (page_index + 1) * reminders_per_page
     page_reminders = reminders[start_index:end_index]
@@ -280,7 +280,7 @@ def callback_query(call):
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('page_completed_'):
     page_index = int(re.findall('\d+', data)[0])
-    reminders = db.Reminder.get_all_completed()
+    reminders = Reminder.get_all_completed()
     start_index = page_index * reminders_per_page
     end_index = (page_index + 1) * reminders_per_page
     page_reminders = reminders[start_index:end_index]
@@ -311,7 +311,7 @@ def callback_query(call):
 
 @bot.message_handler(commands=['list_completed'])
 def list_completed_reminders(message):
-  reminders = db.Reminder.get_all_completed()
+  reminders = Reminder.get_all_completed()
   page_reminders = reminders[:reminders_per_page]
 
   text = utils.reminders_to_message(page_reminders)
@@ -513,14 +513,14 @@ def reminder_date(message):
     return
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-    reminder = db.Reminder(
+    reminder = Reminder(
       name=data['reminder_creation_name'],
       date=data['reminder_creation_date'],
       is_periodic=data['reminder_creation_is_periodic'],
       period_days=data['reminder_creation_period_days'],
       chat_id=message.chat.id,
     )
-    db.Reminder.add(reminder)
+    Reminder.add(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
 
@@ -558,7 +558,7 @@ def reminder_date(message):
   os.remove(file_name)
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-    reminder = db.Reminder(
+    reminder = Reminder(
       name=data['reminder_creation_name'],
       date=data['reminder_creation_date'],
       files=[object_name],
@@ -566,7 +566,7 @@ def reminder_date(message):
       period_days=data['reminder_creation_period_days'],
       chat_id=message.chat.id,
     )
-    db.Reminder.add(reminder)
+    Reminder.add(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
 
@@ -588,7 +588,7 @@ def reminder_name(message):
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     if (message.text == utils.keyboard_buttons['keep_the_same']):
       reminder_id = data['reminder_editing_id']
-      reminder = db.Reminder.get(reminder_id)
+      reminder = Reminder.get(reminder_id)
       data['reminder_editing_name'] = reminder.name
     else:
       data['reminder_editing_name'] = message.text.strip()
@@ -624,7 +624,7 @@ def reminder_date(message):
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     if (message.text == utils.keyboard_buttons['keep_the_same']):
       reminder_id = data['reminder_editing_id']
-      reminder = db.Reminder.get(reminder_id)
+      reminder = Reminder.get(reminder_id)
       data['reminder_editing_date'] = reminder.date
     else:
       date_string = message.text.strip().lower()
@@ -681,7 +681,7 @@ def reminder_date(message):
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     reminder_id = data['reminder_editing_id']
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     data['reminder_editing_is_periodic'] = reminder.is_periodic if message.text == utils.keyboard_buttons['keep_the_same'] else False
     print(data['reminder_editing_is_periodic'])
     data['reminder_editing_period_days'] = 0
@@ -768,14 +768,14 @@ def reminder_date(message):
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     reminder_id = data['reminder_editing_id']
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     reminder.name = data['reminder_editing_name']
     reminder.date = data['reminder_editing_date']
     reminder.is_periodic = data['reminder_editing_is_periodic']
     reminder.period_days = data['reminder_editing_period_days']
     reminder.files = reminder.files if message.text == utils.keyboard_buttons['keep_the_same'] else []
     reminder.is_notified = False
-    db.Reminder.update(reminder)
+    Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
 
@@ -814,12 +814,12 @@ def reminder_date(message):
 
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     reminder_id = data['reminder_editing_id']
-    reminder = db.Reminder.get(reminder_id)
+    reminder = Reminder.get(reminder_id)
     reminder.name = data['reminder_editing_name']
     reminder.date = data['reminder_editing_date']
     reminder.date = [object_name]
     reminder.is_notified = False
-    db.Reminder.update(reminder)
+    Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
 
@@ -850,12 +850,12 @@ def reminder_date(message):
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
     reminder_id = data['reminder_returning_id']
 
-  reminder = db.Reminder.get(reminder_id)
+  reminder = Reminder.get(reminder_id)
   reminder.is_done = False
   reminder.data = date
   reminder.date_completed = None
   reminder.is_notified = False
-  db.Reminder.update(reminder)
+  Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
 
@@ -889,7 +889,7 @@ if __name__ == '__main__':
 
   while True:
     now = datetime.datetime.now()
-    reminders = db.Reminder.get_all()
+    reminders = Reminder.get_all()
     reply_markup = utils.get_main_keyboard()
 
     for reminder in reminders:
@@ -904,6 +904,6 @@ if __name__ == '__main__':
           reminder.date += datetime.timedelta(days=reminder.period_days)
         else:
           reminder.is_notified = True
-        db.Reminder.update(reminder)
+        Reminder.update(reminder)
 
     time.sleep(1)
