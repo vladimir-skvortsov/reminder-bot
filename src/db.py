@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 db_uri = os.getenv('DB_URI')
-engine = create_engine(db_uri)
+engine = create_engine(db_uri, pool_size=10, max_overflow=20)
 Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
