@@ -6,6 +6,8 @@ import db
 import re
 import dateparser
 import datetime
+import time
+import threading
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -516,6 +518,7 @@ def reminder_date(message):
       date=data['reminder_creation_date'],
       is_periodic=data['reminder_creation_is_periodic'],
       period_days=data['reminder_creation_period_days'],
+      chat_id=message.chat.id,
     )
     db.Reminder.add(reminder)
 
@@ -561,6 +564,7 @@ def reminder_date(message):
       files=[object_name],
       is_periodic=data['reminder_creation_is_periodic'],
       period_days=data['reminder_creation_period_days'],
+      chat_id=message.chat.id,
     )
     db.Reminder.add(reminder)
 
@@ -770,6 +774,7 @@ def reminder_date(message):
     reminder.is_periodic = data['reminder_editing_is_periodic']
     reminder.period_days = data['reminder_editing_period_days']
     reminder.files = reminder.files if message.text == utils.keyboard_buttons['keep_the_same'] else []
+    reminder.is_notified = False
     db.Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
@@ -813,6 +818,7 @@ def reminder_date(message):
     reminder.name = data['reminder_editing_name']
     reminder.date = data['reminder_editing_date']
     reminder.date = [object_name]
+    reminder.is_notified = False
     db.Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
@@ -848,6 +854,7 @@ def reminder_date(message):
   reminder.is_done = False
   reminder.data = date
   reminder.date_completed = None
+  reminder.is_notified = False
   db.Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)
@@ -877,4 +884,26 @@ def reminder_date(message):
 
 bot.add_custom_filter(telebot.custom_filters.StateFilter(bot))
 
-bot.infinity_polling()
+if __name__ == '__main__':
+  threading.Thread(target=bot.infinity_polling, name='bot_infinity_polling', daemon=True).start()
+
+  while True:
+    now = datetime.datetime.now()
+    reminders = db.Reminder.get_all()
+    reply_markup = utils.get_main_keyboard()
+
+    for reminder in reminders:
+      if reminder.date < now and not reminder.is_notified and not reminder.is_done:
+        bot.send_message(
+          reminder.chat_id,
+          reminder.name,
+          reply_markup=reply_markup,
+        )
+
+        if reminder.is_periodic:
+          reminder.date += datetime.timedelta(days=reminder.period_days)
+        else:
+          reminder.is_notified = True
+        db.Reminder.update(reminder)
+
+    time.sleep(1)

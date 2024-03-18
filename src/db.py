@@ -25,6 +25,8 @@ class Reminder(Base):
   files = Column(ARRAY(String), default=[])
   is_periodic = Column(Boolean, default=False)
   period_days = Column(Integer)
+  is_notified = Column(Boolean, default=False)
+  chat_id = Column(Integer)
 
   def __repr__(self) -> str:
     return f'Reminder(id={self.id}, name={self.name}, is_done={self.is_done}, date={self.date}, files={self.files})'
