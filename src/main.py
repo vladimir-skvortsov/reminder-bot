@@ -98,40 +98,39 @@ def callback_query(call):
     text = utils.reminder_to_message(reminder)
 
     inline_markup = telebot.types.InlineKeyboardMarkup()
+    mark_button = None
     if reminder.is_done:
-      inline_markup.row(
-        telebot.types.InlineKeyboardButton(
-          utils.keyboard_buttons['math_uncompleted'],
-          callback_data=f'mark_uncompleted_{reminder_id}',
-        ),
-        telebot.types.InlineKeyboardButton(
-          utils.keyboard_buttons['edit'],
-          callback_data=f'edit_{reminder_id}',
-        ),
-        telebot.types.InlineKeyboardButton(
-          utils.keyboard_buttons['delete'],
-          callback_data=f'delete_{reminder_id}',
-        ),
+      mark_button = telebot.types.InlineKeyboardButton(
+        utils.keyboard_buttons['mark_uncompleted'],
+        callback_data=f'mark_uncompleted_{reminder_id}',
       )
     else:
+      mark_button = telebot.types.InlineKeyboardButton(
+        utils.keyboard_buttons['mark_completed'],
+        callback_data=f'mark_completed_{reminder_id}',
+      )
+    inline_markup.row(
+      mark_button,
+      telebot.types.InlineKeyboardButton(
+        utils.keyboard_buttons['edit'],
+        callback_data=f'edit_{reminder_id}',
+      ),
+      telebot.types.InlineKeyboardButton(
+        utils.keyboard_buttons['delete'],
+        callback_data=f'delete_{reminder_id}',
+      ),
+    )
+    if len(reminder.files):
       inline_markup.row(
         telebot.types.InlineKeyboardButton(
-          utils.keyboard_buttons['mark_completed'],
-          callback_data=f'mark_completed_{reminder_id}',
-        ),
-        telebot.types.InlineKeyboardButton(
-          utils.keyboard_buttons['edit'],
-          callback_data=f'edit_{reminder_id}',
-        ),
-        telebot.types.InlineKeyboardButton(
-          utils.keyboard_buttons['delete'],
-          callback_data=f'delete_{reminder_id}',
+          'Get files',
+          callback_data=f'get_files_{reminder_id}',
         ),
       )
     inline_markup.row(
       telebot.types.InlineKeyboardButton(
         'Back to list',
-        callback_data=f'back_to_list',
+        callback_data='back_to_list',
       ),
     )
 
@@ -308,6 +307,19 @@ def callback_query(call):
       inline_markup.row(*pages_buttons)
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
+  elif data.startswith('get_files_'):
+    reminder_id = int(re.findall('\d+', data)[0])
+    reminder = Reminder.get(reminder_id)
+
+    media_group = []
+    for file in reminder.files:
+      s3.download_file(aws_bucket, file, file)
+      media_group.append(telebot.types.InputMediaDocument(open(file, 'rb')))
+
+    bot.send_media_group(chat_id, media_group)
+
+    for file in reminder.files:
+      os.remove(file)
 
 @bot.message_handler(commands=['list_completed'])
 def list_completed_reminders(message):
