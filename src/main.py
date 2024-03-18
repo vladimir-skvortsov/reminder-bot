@@ -28,11 +28,15 @@ reminders_per_page = 7
 class StatesGroup(telebot.handler_backends.StatesGroup):
   reminder_creation_name = telebot.handler_backends.State()
   reminder_creation_date = telebot.handler_backends.State()
+  reminder_creation_periodic_prompt = telebot.handler_backends.State()
+  reminder_creation_period_days = telebot.handler_backends.State()
   reminder_creation_files_prompt = telebot.handler_backends.State()
   reminder_creation_files = telebot.handler_backends.State()
 
   reminder_editing_name = telebot.handler_backends.State()
   reminder_editing_date = telebot.handler_backends.State()
+  reminder_editing_periodic_prompt = telebot.handler_backends.State()
+  reminder_editing_period_days = telebot.handler_backends.State()
   reminder_editing_files_prompt = telebot.handler_backends.State()
   reminder_editing_files = telebot.handler_backends.State()
 
@@ -394,6 +398,51 @@ def reminder_date(message):
   reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
     message.chat.id,
+    'Should it be a periodic reminder?',
+    reply_markup=reply_markup,
+  )
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_creation_periodic_prompt,
+    message.chat.id
+  )
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    data['reminder_creation_date'] = date
+
+@bot.message_handler(state=StatesGroup.reminder_creation_periodic_prompt)
+def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  if message.text == 'Yes':
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+      data['reminder_creation_is_periodic'] = True
+    bot.send_message(message.chat.id, 'Ok, what is the period in days?')
+    bot.set_state(
+      message.from_user.id,
+      StatesGroup.reminder_creation_period_days,
+      message.chat.id,
+    )
+    return
+
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    data['reminder_creation_is_periodic'] = False
+    data['reminder_creation_period_days'] = 0
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton('No'),
+  )
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
+  bot.send_message(
+    message.chat.id,
     'Do you want to attach any files?',
     reply_markup=reply_markup,
   )
@@ -402,8 +451,47 @@ def reminder_date(message):
     StatesGroup.reminder_creation_files_prompt,
     message.chat.id
   )
+
+@bot.message_handler(state=StatesGroup.reminder_creation_period_days)
+def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  user_input = message.text.strip().lower()
+
+  try:
+    days = int(user_input)
+  except Exception as e:
+    bot.send_message(message.chat.id, 'I don\'t understand')
+    return
+
+
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_creation_files_prompt,
+    message.chat.id
+  )
   with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
-    data['reminder_creation_date'] = date
+    data['reminder_creation_period_days'] = days
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton('No'),
+  )
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
+
+  bot.send_message(
+    message.chat.id,
+    'Do you want to attach any files?',
+    reply_markup=reply_markup,
+  )
 
 @bot.message_handler(state=StatesGroup.reminder_creation_files_prompt)
 def reminder_date(message):
@@ -426,6 +514,8 @@ def reminder_date(message):
     reminder = db.Reminder(
       name=data['reminder_creation_name'],
       date=data['reminder_creation_date'],
+      is_periodic=data['reminder_creation_is_periodic'],
+      period_days=data['reminder_creation_period_days'],
     )
     db.Reminder.add(reminder)
 
@@ -469,6 +559,8 @@ def reminder_date(message):
       name=data['reminder_creation_name'],
       date=data['reminder_creation_date'],
       files=[object_name],
+      is_periodic=data['reminder_creation_is_periodic'],
+      period_days=data['reminder_creation_period_days'],
     )
     db.Reminder.add(reminder)
 
@@ -547,18 +639,110 @@ def reminder_date(message):
   )
   reply_markup.row(
     telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton('No'),
+  )
+  reply_markup.row(
     telebot.types.KeyboardButton(utils.keyboard_buttons['keep_the_same']),
   )
   reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
   bot.send_message(
     message.chat.id,
-    'Do you want to edit files?',
+    'Should it be a periodic reminder?',
+    reply_markup=reply_markup,
+  )
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_editing_periodic_prompt,
+    message.chat.id
+  )
+
+@bot.message_handler(state=StatesGroup.reminder_editing_periodic_prompt)
+def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  if message.text == 'Yes':
+    with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+      data['reminder_editing_is_periodic'] = True
+    bot.send_message(message.chat.id, 'Ok, what is the period in days?')
+    bot.set_state(
+      message.from_user.id,
+      StatesGroup.reminder_editing_period_days,
+      message.chat.id,
+    )
+    return
+
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    reminder_id = data['reminder_editing_id']
+    reminder = db.Reminder.get(reminder_id)
+    data['reminder_editing_is_periodic'] = reminder.is_periodic if message.text == utils.keyboard_buttons['keep_the_same'] else False
+    print(data['reminder_editing_is_periodic'])
+    data['reminder_editing_period_days'] = 0
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton('No'),
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton(utils.keyboard_buttons['keep_the_same']),
+  )
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
+  bot.send_message(
+    message.chat.id,
+    'Do you want to attach any files?',
     reply_markup=reply_markup,
   )
   bot.set_state(
     message.from_user.id,
     StatesGroup.reminder_editing_files_prompt,
     message.chat.id
+  )
+
+@bot.message_handler(state=StatesGroup.reminder_editing_period_days)
+def reminder_date(message):
+  if (message.text == utils.keyboard_buttons['cancel']):
+    bot.delete_state(message.from_user.id, message.chat.id)
+    reply_markup = utils.get_main_keyboard()
+    bot.send_message(message.chat.id, 'Cancelled', reply_markup=reply_markup)
+    return
+
+  user_input = message.text.strip().lower()
+
+  try:
+    days = int(user_input)
+  except Exception as e:
+    bot.send_message(message.chat.id, 'I don\'t understand')
+    return
+
+  bot.set_state(
+    message.from_user.id,
+    StatesGroup.reminder_editing_files_prompt,
+    message.chat.id
+  )
+  with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+    data['reminder_editing_period_days'] = days
+
+  reply_markup = telebot.types.ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    one_time_keyboard=False,
+  )
+  reply_markup.row(
+    telebot.types.KeyboardButton('Yes'),
+    telebot.types.KeyboardButton('No'),
+  )
+  reply_markup.row(telebot.types.KeyboardButton(utils.keyboard_buttons['cancel']))
+
+  bot.send_message(
+    message.chat.id,
+    'Do you want to attach any files?',
+    reply_markup=reply_markup,
   )
 
 @bot.message_handler(state=StatesGroup.reminder_editing_files_prompt)
@@ -583,6 +767,9 @@ def reminder_date(message):
     reminder = db.Reminder.get(reminder_id)
     reminder.name = data['reminder_editing_name']
     reminder.date = data['reminder_editing_date']
+    reminder.is_periodic = data['reminder_editing_is_periodic']
+    reminder.period_days = data['reminder_editing_period_days']
+    reminder.files = reminder.files if message.text == utils.keyboard_buttons['keep_the_same'] else []
     db.Reminder.update(reminder)
 
   bot.delete_state(message.from_user.id, message.chat.id)

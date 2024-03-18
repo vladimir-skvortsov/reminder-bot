@@ -41,8 +41,12 @@ def reminders_to_message(reminders, start_index=0):
 
 def reminder_to_message(reminder):
   formatted_date = format_reminder_date(reminder.date)
-  return (
-    f'{reminder.name}\n\n'
-    f'<b>Next sending time:</b>\n{formatted_date}\n\n'
-    f'<b>{len(reminder.files) if len(reminder.files) else "No"} files attached</b>'
-  )
+  text = f'{reminder.name}\n\n'
+  text += f'<b>Next sending time:</b>\n{formatted_date}\n\n'
+
+  if reminder.is_periodic:
+    text += f'<b>Period:</b>\n{reminder.period_days} day(s)\n\n'
+
+  text += f'<b>{len(reminder.files) if len(reminder.files) else "No"} files attached</b>'
+
+  return text
