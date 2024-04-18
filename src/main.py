@@ -67,7 +67,7 @@ def cancel(message):
 
 @bot.message_handler(commands=['list'])
 def list_uncompleted_reminders(message):
-  reminders = Reminder.get_all_uncompleted()
+  reminders = Reminder.get_all_uncompleted(message.chat.id)
 
   if len(reminders) == 0:
     reply_markup = utils.get_main_keyboard()
@@ -152,13 +152,13 @@ def callback_query(call):
       reply_markup=inline_markup,
     )
   elif data.startswith('mark_completed_'):
-    reminder_id = int(re.findall('\d+', data)[0])
+    reminder_id = int(re.findall('\\d+', data)[0])
     reminder = Reminder.get(reminder_id)
     reminder.is_done = True
     reminder.date_completed = datetime.datetime.now()
     Reminder.update(reminder)
 
-    reminders = Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted(chat_id)
     page_reminders = reminders[:reminders_per_page]
 
     text = utils.reminders_to_message(page_reminders)
@@ -176,7 +176,7 @@ def callback_query(call):
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('mark_uncompleted_'):
-    reminder_id = int(re.findall('\d+', data)[0])
+    reminder_id = int(re.findall('\\d+', data)[0])
     reminder = Reminder.get(reminder_id)
     reply_markup = telebot.types.ReplyKeyboardMarkup(
       resize_keyboard=True,
@@ -196,10 +196,10 @@ def callback_query(call):
     with bot.retrieve_data(user_id, chat_id) as data:
       data['reminder_returning_id'] = reminder_id
   elif data.startswith('delete_'):
-    reminder_id = int(re.findall('\d+', data)[0])
+    reminder_id = int(re.findall('\\d+', data)[0])
     Reminder.delete(reminder_id)
 
-    reminders = Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted(chat_id)
     page_reminders = reminders[:reminders_per_page]
 
     text = utils.reminders_to_message(page_reminders)
@@ -217,7 +217,7 @@ def callback_query(call):
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('edit_'):
-    reminder_id = int(re.findall('\d+', data)[0])
+    reminder_id = int(re.findall('\\d+', data)[0])
     reminder = Reminder.get(reminder_id)
     reply_markup = telebot.types.ReplyKeyboardMarkup(
       resize_keyboard=True,
@@ -240,7 +240,7 @@ def callback_query(call):
     with bot.retrieve_data(user_id, chat_id) as data:
       data['reminder_editing_id'] = reminder_id
   elif data.startswith('back_to_list'):
-    reminders = Reminder.get_all_uncompleted()
+    reminders = Reminder.get_all_uncompleted(chat_id)
     page_reminders = reminders[:reminders_per_page]
 
     text = utils.reminders_to_message(page_reminders)
@@ -258,8 +258,8 @@ def callback_query(call):
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('page_uncompleted_'):
-    page_index = int(re.findall('\d+', data)[0])
-    reminders = Reminder.get_all_uncompleted()
+    page_index = int(re.findall('\\d+', data)[0])
+    reminders = Reminder.get_all_uncompleted(chat_id)
     start_index = page_index * reminders_per_page
     end_index = (page_index + 1) * reminders_per_page
     page_reminders = reminders[start_index:end_index]
@@ -288,8 +288,8 @@ def callback_query(call):
 
     bot.edit_message_text(text, chat_id, message_id, reply_markup=inline_markup)
   elif data.startswith('page_completed_'):
-    page_index = int(re.findall('\d+', data)[0])
-    reminders = Reminder.get_all_completed()
+    page_index = int(re.findall('\\d+', data)[0])
+    reminders = Reminder.get_all_completed(chat_id)
     start_index = page_index * reminders_per_page
     end_index = (page_index + 1) * reminders_per_page
     page_reminders = reminders[start_index:end_index]
@@ -333,7 +333,7 @@ def callback_query(call):
 
 @bot.message_handler(commands=['list_completed'])
 def list_completed_reminders(message):
-  reminders = Reminder.get_all_completed()
+  reminders = Reminder.get_all_completed(message.chat.id)
 
   if len(reminders) == 0:
     reply_markup = utils.get_main_keyboard()

@@ -42,14 +42,14 @@ class Reminder(Base):
     return session.query(cls).all()
 
   @classmethod
-  def get_all_completed(cls):
+  def get_all_completed(cls, chat_id):
     session = Session()
-    return session.query(cls).filter_by(is_done=True).order_by(desc(Reminder.date)).all()
+    return session.query(cls).filter_by(chat_id=chat_id, is_done=True).order_by(desc(Reminder.date)).all()
 
   @classmethod
-  def get_all_uncompleted(cls):
+  def get_all_uncompleted(cls, chat_id):
     session = Session()
-    return session.query(cls).filter_by(is_done=False).all()
+    return session.query(cls).filter_by(chat_id=chat_id, is_done=False).all()
 
   @classmethod
   def add(cls, reminder):
