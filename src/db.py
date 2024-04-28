@@ -8,10 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-db_uri = os.getenv('DB_URI')
-engine = create_engine(db_uri, pool_size=10, max_overflow=20)
-Session = sessionmaker(bind=engine)
-
 Base = declarative_base()
 
 class Reminder(Base):
@@ -71,5 +67,9 @@ class Reminder(Base):
       session.delete(reminder)
       session.commit()
 
-if __name__ == '__main__':
-  Base.metadata.create_all(engine)
+db_uri = os.getenv('DB_URI')
+engine = create_engine(db_uri, pool_size=10, max_overflow=20)
+
+Base.metadata.create_all(engine)
+
+Session = sessionmaker(bind=engine)
