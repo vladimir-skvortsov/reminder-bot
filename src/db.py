@@ -72,12 +72,4 @@ class Reminder(Base):
       session.commit()
 
 if __name__ == '__main__':
-  # from sqlalchemy import create_engine
-
-  # engine = create_engine('postgresql://postgres:postgres@localhost/postgres')
-  # Base.metadata.create_all(engine)
-
-  reminders = Reminder.get_all()
-  for reminder in reminders:
-    Reminder.delete(reminder.id)
-  # print(reminders)
+  Base.metadata.create_all(engine)
