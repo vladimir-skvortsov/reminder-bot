@@ -4,3 +4,5 @@ boto3==1.34.54
 dateparser==1.2.0
 sqlalchemy==2.0.27
 psycopg2-binary==2.9.9
+uvicorn==0.18.3
+fastapi==0.104.1
