@@ -1,7 +1,7 @@
 import telebot
 
 keyboard_buttons = {
-  'add': '➕ Add test',
+  'add': '➕ Add',
   'list_uncompleted': '📄 List reminders',
   'list_completed': '✔️ List completed reminders',
   'cancel': '✖️ Cancel',
